@@ -1,0 +1,12 @@
+{
+  "files.associations": {
+    "*.feature": "cucumber"
+  },
+  "cucumber.features": [
+    "src/test/features/*.feature"
+  ],
+  "cucumber.glue": [
+    "src/test/steps/*.ts"
+  ],
+  "typescript.suggest.autoImports": true
+}

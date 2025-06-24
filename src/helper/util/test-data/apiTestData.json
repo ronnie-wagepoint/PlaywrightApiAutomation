@@ -1,0 +1,142 @@
+{
+  "posts": {
+    "validPost": {
+      "title": "Test Post Title",
+      "body": "This is a test post body with some content for testing purposes.",
+      "userId": 1
+    },
+    "invalidPost": {
+      "title": "",
+      "body": "",
+      "userId": "invalid"
+    },
+    "updatePost": {
+      "title": "Updated Post Title",
+      "body": "This is an updated post body with modified content.",
+      "userId": 1
+    }
+  },
+  "users": {
+    "validUser": {
+      "name": "John Doe",
+      "username": "johndoe",
+      "email": "john.doe@example.com",
+      "phone": "1234567890",
+      "website": "johndoe.com",
+      "address": {
+        "street": "123 Main St",
+        "suite": "Apt 4B",
+        "city": "New York",
+        "zipcode": "10001",
+        "geo": {
+          "lat": "40.7128",
+          "lng": "-74.0060"
+        }
+      },
+      "company": {
+        "name": "Test Company",
+        "catchPhrase": "Testing is fun",
+        "bs": "test-driven development"
+      }
+    },
+    "invalidUser": {
+      "name": "",
+      "username": "",
+      "email": "invalid-email",
+      "phone": ""
+    }
+  },
+  "comments": {
+    "validComment": {
+      "postId": 1,
+      "name": "Test Commenter",
+      "email": "commenter@example.com",
+      "body": "This is a test comment for the post."
+    }
+  },
+  "albums": {
+    "validAlbum": {
+      "title": "Test Album",
+      "userId": 1
+    }
+  },
+  "photos": {
+    "validPhoto": {
+      "albumId": 1,
+      "title": "Test Photo",
+      "url": "https://via.placeholder.com/600/92c952",
+      "thumbnailUrl": "https://via.placeholder.com/150/92c952"
+    }
+  },
+  "todos": {
+    "validTodo": {
+      "title": "Test Todo Item",
+      "completed": false,
+      "userId": 1
+    },
+    "completedTodo": {
+      "title": "Completed Todo Item",
+      "completed": true,
+      "userId": 1
+    }
+  },
+  "headers": {
+    "customHeaders": {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+      "User-Agent": "Playwright-API-Test",
+      "X-Request-ID": "test-123",
+      "Cache-Control": "no-cache"
+    },
+    "authHeaders": {
+      "Authorization": "Bearer test-token",
+      "Accept": "application/json"
+    }
+  },
+  "endpoints": {
+    "posts": "/posts",
+    "users": "/users",
+    "comments": "/comments",
+    "albums": "/albums",
+    "photos": "/photos",
+    "todos": "/todos"
+  },
+  "expectedResponses": {
+    "postSchema": {
+      "id": "number",
+      "title": "string",
+      "body": "string",
+      "userId": "number"
+    },
+    "userSchema": {
+      "id": "number",
+      "name": "string",
+      "username": "string",
+      "email": "string",
+      "phone": "string",
+      "website": "string",
+      "address": "object",
+      "company": "object"
+    }
+  },
+  "errorScenarios": {
+    "invalidIds": ["999", "abc", "0", "-1"],
+    "invalidEndpoints": ["/invalid", "/posts/invalid", "/users/abc"],
+    "timeoutScenarios": {
+      "shortTimeout": 1000,
+      "longTimeout": 60000
+    }
+  },
+  "performance": {
+    "concurrentRequests": {
+      "small": 5,
+      "medium": 10,
+      "large": 20
+    },
+    "timeouts": {
+      "short": 5000,
+      "medium": 15000,
+      "long": 30000
+    }
+  }
+} 
