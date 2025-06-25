@@ -3,7 +3,7 @@ import { APIRequestContext, request } from "@playwright/test";
 import { fixture } from "./pageFixture";
 import { createLogger } from "winston";
 import { options } from "../helper/util/logger";
-import { TestDataManager } from "../helper/util/test-data/TestDataManager";
+import { TestDataManager } from "../helper/util/test-data/testDataManager";
 
 let apiContext: APIRequestContext;
 

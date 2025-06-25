@@ -159,11 +159,6 @@ Given('I execute DELETE REST API with url path {string}, headers {string}', asyn
 
 // ==================== RANDOM BODY STEP DEFINITIONS ====================
 
-Given('I execute GET REST API with url path {string} and random body {string}', async function (urlPath, body) {
-    response = await executeRestApiWithRandomBody(fixture.request, 'GET', urlPath, body, undefined, fixture.logger);
-    responseData = await parseResponse(response);
-});
-
 Given('I execute POST REST API with url path {string} and random body {string}', async function (urlPath, body) {
     response = await executeRestApiWithRandomBody(fixture.request, 'POST', urlPath, body, undefined, fixture.logger);
     responseData = await parseResponse(response);
@@ -180,10 +175,6 @@ Given('I execute DELETE REST API with url path {string} and random body {string}
 });
 
 // Random body with headers support
-Given('I execute GET REST API with url path {string}, headers {string}, and random body {string}', async function (urlPath, headers, body) {
-    response = await executeRestApiWithRandomBody(fixture.request, 'GET', urlPath, body, headers, fixture.logger);
-    responseData = await parseResponse(response);
-});
 
 Given('I execute POST REST API with url path {string}, headers {string}, and random body {string}', async function (urlPath, headers, body) {
     response = await executeRestApiWithRandomBody(fixture.request, 'POST', urlPath, body, headers, fixture.logger);
