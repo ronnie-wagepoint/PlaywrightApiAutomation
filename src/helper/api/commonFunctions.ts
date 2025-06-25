@@ -1,8 +1,6 @@
-import { APIRequestContext, APIResponse } from '@playwright/test';
+import { APIRequestContext, APIResponse, expect } from '@playwright/test';
 import { RequestMethodType } from './enums';
 import { faker } from '@faker-js/faker';
-import { RandomDataGenerator } from '../util/test-data/randomDataGenerator';
-import * as staticData from '../util/test-data/apiTestData.json';
 
 /**
  * Parse and replace random placeholders in request body

@@ -4,7 +4,7 @@ import { fixture } from "../../hooks/pageFixture";
 import { DataTable } from "@cucumber/cucumber";
 import { executeRestApi, parseHeaders, createAuthHeaders, executeRestApiWithRandomBody } from "../../helper/api/commonFunctions";
 import { RequestMethodType } from "../../helper/api/enums";
-import { TestDataManager } from "../../helper/util/test-data/TestDataManager";
+import { TestDataManager } from "../../helper/util/test-data/testDataManager";
 
 setDefaultTimeout(60 * 1000 * 2);
 
