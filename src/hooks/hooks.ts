@@ -3,11 +3,31 @@ import { APIRequestContext, request } from "@playwright/test";
 import { fixture } from "./pageFixture";
 import { createLogger } from "winston";
 import { options } from "../helper/util/logger";
+import { TestDataManager } from "../helper/util/test-data/TestDataManager";
 
 let apiContext: APIRequestContext;
 
 BeforeAll(async function () {
     // Setup for API automation
+});
+
+// It will trigger for random test data scenarios
+Before({ tags: "@randomTestData" }, async function ({ pickle }) {
+    const scenarioName = pickle.name + pickle.id;
+    
+    // Enable random data generation
+    TestDataManager.enableRandomData();
+    
+    // Optional: Seed random data for consistent test runs (uncomment if needed)
+    // const seed = TestDataManager.seedRandomData();
+    
+    fixture.logger?.info(`Random test data enabled for scenario: ${scenarioName}`);
+    fixture.logger?.info(`Current test data mode: ${TestDataManager.isRandomDataEnabled() ? 'Random' : 'Static'}`);
+    
+    // Log sample random data for debugging
+    if (fixture.logger) {
+        fixture.logger.info(`Sample random data: ${TestDataManager.getAllTestDataAsJson()}`);
+    }
 });
 
 // It will trigger for API scenarios
@@ -32,6 +52,20 @@ Before({ tags: "@api" }, async function ({ pickle }) {
     this.fixture = fixture;
     
     fixture.logger.info(`Starting API test: ${scenarioName}`);
+});
+
+After({ tags: "@randomTestData" }, async function ({ pickle, result }) {
+    const scenarioName = pickle.name + pickle.id;
+    
+    if (result?.status == Status.PASSED) {
+        fixture.logger?.info(`Random test data scenario passed: ${scenarioName}`);
+    } else {
+        fixture.logger?.error(`Random test data scenario failed: ${scenarioName}`);
+    }
+    
+    // Disable random data generation after the scenario
+    TestDataManager.disableRandomData();
+    fixture.logger?.info(`Random test data disabled after scenario: ${scenarioName}`);
 });
 
 After({ tags: "@api" }, async function ({ pickle, result }) {

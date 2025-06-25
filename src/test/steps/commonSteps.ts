@@ -2,19 +2,44 @@ import { Given, When, Then, setDefaultTimeout } from "@cucumber/cucumber";
 import { expect } from "@playwright/test";
 import { fixture } from "../../hooks/pageFixture";
 import { DataTable } from "@cucumber/cucumber";
-import { ApiHelper } from "../../helper/api/apiHelper";
-import { testData } from "../../helper/api/apiHelper";
-import { executeRestApi } from "../../helper/api/commonFunctions";
+import { executeRestApi, parseHeaders, createAuthHeaders, executeRestApiWithRandomBody } from "../../helper/api/commonFunctions";
 import { RequestMethodType } from "../../helper/api/enums";
+import { TestDataManager } from "../../helper/util/test-data/TestDataManager";
 
 setDefaultTimeout(60 * 1000 * 2);
 
 let response: any;
 let responseData: any;
-let apiHelper: ApiHelper;
 let createdPostId: number;
 let createdUserId: number;
 let customHeaders: any = {};
+
+// Helper function to parse response based on content type
+async function parseResponse(response: any): Promise<any> {
+    const contentType = response.headers()['content-type'] || '';
+    
+    try {
+        if (contentType.includes('application/json')) {
+            return await response.json();
+        } else if (response.status() === 204) {
+            // 204 No Content - return empty object
+            return {};
+        } else {
+            // For non-JSON responses, return as text
+            const textData = await response.text();
+            fixture.logger.info(`Non-JSON response received. Content-Type: ${contentType}`);
+            return textData;
+        }
+    } catch (error) {
+        fixture.logger.warn(`Failed to parse response: ${error.message}. Falling back to text.`);
+        try {
+            return await response.text();
+        } catch (textError) {
+            fixture.logger.warn(`Failed to parse as text: ${textError.message}. Returning empty object.`);
+            return {};
+        }
+    }
+}
 
 // ==================== COMMON STEPS ====================
 
@@ -23,8 +48,8 @@ Given('I have a valid API endpoint', async function () {
 });
 
 Given('I initialize the API helper', async function () {
-    apiHelper = new ApiHelper(fixture.request);
-    fixture.logger.info("API helper initialized");
+    // No longer needed - using fixture.request directly
+    fixture.logger.info("Using Playwright's built-in request context");
 });
 
 Given('I set the authorization header', async function () {
@@ -56,18 +81,126 @@ Given(
   }
 );
 
-// Simplified step patterns for better IDE navigation
+// Simplified step patterns for backward compatibility (without headers)
 Given('I execute GET REST API with url path {string}', async function (urlPath) {
+    fixture.logger.info(`Executing GET request to: ${urlPath}`);
+    response = await fixture.request.get(urlPath);
+    responseData = await parseResponse(response);
+    fixture.logger.info(`GET request completed with status: ${response.status()}`);
 });
 
 Given('I execute POST REST API with url path {string} and body {string}', async function (urlPath, body) {
+    fixture.logger.info(`Executing POST request to: ${urlPath}`);
+    const requestBody = body !== 'null' && body !== '' ? JSON.parse(body) : {};
+    response = await fixture.request.post(urlPath, { data: requestBody });
+    responseData = await parseResponse(response);
+    fixture.logger.info(`POST request completed with status: ${response.status()}`);
 });
 
 Given('I execute PUT REST API with url path {string} and body {string}', async function (urlPath, body) {
+    fixture.logger.info(`Executing PUT request to: ${urlPath}`);
+    const requestBody = body !== 'null' && body !== '' ? JSON.parse(body) : {};
+    response = await fixture.request.put(urlPath, { data: requestBody });
+    responseData = await parseResponse(response);
+    fixture.logger.info(`PUT request completed with status: ${response.status()}`);
+});
+
+Given('I execute PUT REST API with url path {string}, headers {string}, and body {string}', async function (urlPath, headers, body) {
+    fixture.logger.info(`Executing PUT request to: ${urlPath}`);
+    const requestBody = body !== 'null' && body !== '' ? JSON.parse(body) : {};
+    const headersObj = parseHeaders(headers, fixture.logger);
+    
+    response = await fixture.request.put(urlPath, { 
+        data: requestBody, 
+        headers: headersObj 
+    });
+    responseData = await parseResponse(response);
+    fixture.logger.info(`PUT request completed with status: ${response.status()}`);
 });
 
 Given('I execute DELETE REST API with url path {string}', async function (urlPath) {
+    fixture.logger.info(`Executing DELETE request to: ${urlPath}`);
+    response = await fixture.request.delete(urlPath);
+    responseData = await parseResponse(response);
+    fixture.logger.info(`DELETE request completed with status: ${response.status()}`);
 });
+
+// Enhanced step patterns with headers support
+Given('I execute GET REST API with url path {string}, headers {string}', async function (urlPath, headers) {
+    fixture.logger.info(`Executing GET request to: ${urlPath}`);
+    const headersObj = parseHeaders(headers, fixture.logger);
+    
+    response = await fixture.request.get(urlPath, { headers: headersObj });
+    responseData = await parseResponse(response);
+    fixture.logger.info(`GET request completed with status: ${response.status()}`);
+});
+
+Given('I execute POST REST API with url path {string}, headers {string}, and body {string}', async function (urlPath, headers, body) {
+    fixture.logger.info(`Executing POST request to: ${urlPath}`);
+    const requestBody = body !== 'null' && body !== '' ? JSON.parse(body) : {};
+    const headersObj = parseHeaders(headers, fixture.logger);
+    
+    response = await fixture.request.post(urlPath, { 
+        data: requestBody, 
+        headers: headersObj 
+    });
+    responseData = await parseResponse(response);
+    fixture.logger.info(`POST request completed with status: ${response.status()}`);
+});
+
+Given('I execute DELETE REST API with url path {string}, headers {string}', async function (urlPath, headers) {
+    fixture.logger.info(`Executing DELETE request to: ${urlPath}`);
+    const headersObj = parseHeaders(headers, fixture.logger);
+    
+    response = await fixture.request.delete(urlPath, { headers: headersObj });
+    responseData = await parseResponse(response);
+    fixture.logger.info(`DELETE request completed with status: ${response.status()}`);
+});
+
+// ==================== RANDOM BODY STEP DEFINITIONS ====================
+
+Given('I execute GET REST API with url path {string} and random body {string}', async function (urlPath, body) {
+    response = await executeRestApiWithRandomBody(fixture.request, 'GET', urlPath, body, undefined, fixture.logger);
+    responseData = await parseResponse(response);
+});
+
+Given('I execute POST REST API with url path {string} and random body {string}', async function (urlPath, body) {
+    response = await executeRestApiWithRandomBody(fixture.request, 'POST', urlPath, body, undefined, fixture.logger);
+    responseData = await parseResponse(response);
+});
+
+Given('I execute PUT REST API with url path {string} and random body {string}', async function (urlPath, body) {
+    response = await executeRestApiWithRandomBody(fixture.request, 'PUT', urlPath, body, undefined, fixture.logger);
+    responseData = await parseResponse(response);
+});
+
+Given('I execute DELETE REST API with url path {string} and random body {string}', async function (urlPath, body) {
+    response = await executeRestApiWithRandomBody(fixture.request, 'DELETE', urlPath, body, undefined, fixture.logger);
+    responseData = await parseResponse(response);
+});
+
+// Random body with headers support
+Given('I execute GET REST API with url path {string}, headers {string}, and random body {string}', async function (urlPath, headers, body) {
+    response = await executeRestApiWithRandomBody(fixture.request, 'GET', urlPath, body, headers, fixture.logger);
+    responseData = await parseResponse(response);
+});
+
+Given('I execute POST REST API with url path {string}, headers {string}, and random body {string}', async function (urlPath, headers, body) {
+    response = await executeRestApiWithRandomBody(fixture.request, 'POST', urlPath, body, headers, fixture.logger);
+    responseData = await parseResponse(response);
+});
+
+Given('I execute PUT REST API with url path {string}, headers {string}, and random body {string}', async function (urlPath, headers, body) {
+    response = await executeRestApiWithRandomBody(fixture.request, 'PUT', urlPath, body, headers, fixture.logger);
+    responseData = await parseResponse(response);
+});
+
+Given('I execute DELETE REST API with url path {string}, headers {string}, and random body {string}', async function (urlPath, headers, body) {
+    response = await executeRestApiWithRandomBody(fixture.request, 'DELETE', urlPath, body, headers, fixture.logger);
+    responseData = await parseResponse(response);
+});
+
+
 
 // ==================== VALIDATION STEPS ====================
 
@@ -97,57 +230,73 @@ Then('I validate status code is {string}', async function (expectedStatusCode: s
 
 When('I create a new post with title {string} and body {string}', async function (title: string, body: string) {
     fixture.logger.info(`Creating post with title: ${title}`);
-    response = await apiHelper.post('/posts', {
-        title: title,
-        body: body,
-        userId: 1
+    response = await fixture.request.post('/posts', {
+        data: {
+            title: title,
+            body: body,
+            userId: 1
+        }
     });
-    responseData = await response.json();
+    responseData = await parseResponse(response);
     createdPostId = responseData.id;
     fixture.logger.info(`Created post with ID: ${createdPostId}`);
 });
 
 When('I get the created post by ID', async function () {
     fixture.logger.info(`Getting post with ID: ${createdPostId}`);
-    response = await apiHelper.get(`/posts/${createdPostId}`);
-    responseData = await response.json();
+    response = await fixture.request.get(`/posts/${createdPostId}`);
+    responseData = await parseResponse(response);
     fixture.logger.info("Retrieved created post");
 });
 
 When('I update the post with new title {string}', async function (newTitle: string) {
     fixture.logger.info(`Updating post ${createdPostId} with new title: ${newTitle}`);
-    response = await apiHelper.put(`/posts/${createdPostId}`, {
-        title: newTitle,
-        body: responseData.body,
-        userId: responseData.userId
+    response = await fixture.request.put(`/posts/${createdPostId}`, {
+        data: {
+            title: newTitle,
+            body: responseData.body,
+            userId: responseData.userId
+        }
     });
-    responseData = await response.json();
+    responseData = await parseResponse(response);
     fixture.logger.info("Post updated");
 });
 
 When('I create a new user with authentication', async function () {
     fixture.logger.info("Creating new user with authentication");
-    response = await apiHelper.post('/users', testData.validUser, apiHelper.getAuthHeaders());
-    responseData = await response.json();
+    const userData = TestDataManager.getUser();
+    response = await fixture.request.post('/users', {
+        data: userData,
+        headers: createAuthHeaders()
+    });
+    responseData = await parseResponse(response);
     createdUserId = responseData.id;
     fixture.logger.info(`Created user with ID: ${createdUserId}`);
+    fixture.logger.info(`Using ${TestDataManager.isRandomDataEnabled() ? 'random' : 'static'} user data: ${JSON.stringify(userData)}`);
 });
 
 When('I get the user profile with authentication', async function () {
     fixture.logger.info(`Getting user profile for ID: ${createdUserId}`);
-    response = await apiHelper.get(`/users/${createdUserId}`, apiHelper.getAuthHeaders());
-    responseData = await response.json();
+    response = await fixture.request.get(`/users/${createdUserId}`, {
+        headers: createAuthHeaders()
+    });
+    responseData = await parseResponse(response);
     fixture.logger.info("User profile retrieved");
 });
 
 When('I update the user with authentication', async function () {
     fixture.logger.info(`Updating user ${createdUserId}`);
-    response = await apiHelper.put(`/users/${createdUserId}`, {
-        ...testData.validUser,
-        name: 'Updated User'
-    }, apiHelper.getAuthHeaders());
-    responseData = await response.json();
+    const userData = TestDataManager.getUser();
+    response = await fixture.request.put(`/users/${createdUserId}`, {
+        data: {
+            ...userData,
+            name: 'Updated User'
+        },
+        headers: createAuthHeaders()
+    });
+    responseData = await parseResponse(response);
     fixture.logger.info("User updated");
+    fixture.logger.info(`Using ${TestDataManager.isRandomDataEnabled() ? 'random' : 'static'} user data for update`);
 });
 
 // ==================== VALIDATION STEPS ====================
@@ -212,7 +361,13 @@ Then('the post title should be {string}', async function (expectedTitle: string)
 
 Then('the response should match the post schema', async function () {
     const requiredFields = ['id', 'title', 'body', 'userId'];
-    expect(apiHelper.validateResponseFields(responseData, requiredFields)).toBeTruthy();
+    
+    // Validate all required fields are present
+    for (const field of requiredFields) {
+        expect(responseData).toHaveProperty(field);
+    }
+    
+    // Validate field types
     expect(typeof responseData.id).toBe('number');
     expect(typeof responseData.title).toBe('string');
     expect(typeof responseData.body).toBe('string');
@@ -222,7 +377,12 @@ Then('the response should match the post schema', async function () {
 
 Then('the post should have required fields: {string}', async function (fields: string) {
     const requiredFields = fields.split(', ').map(field => field.trim());
-    expect(apiHelper.validateResponseFields(responseData, requiredFields)).toBeTruthy();
+    
+    // Validate all required fields are present
+    for (const field of requiredFields) {
+        expect(responseData).toHaveProperty(field);
+    }
+    
     fixture.logger.info(`Required fields validation passed: ${fields}`);
 });
 
@@ -323,8 +483,8 @@ Then('the user name should be {string}', async function (expectedName: string) {
 
 When('I get posts with limit {string} and offset {string}', async function (limit: string, offset: string) {
     fixture.logger.info(`Getting posts with limit: ${limit}, offset: ${offset}`);
-    response = await apiHelper.get(`/posts?_limit=${limit}&_start=${offset}`);
-    responseData = await response.json();
+    response = await fixture.request.get(`/posts?_limit=${limit}&_start=${offset}`);
+    responseData = await parseResponse(response);
     fixture.logger.info(`Retrieved ${responseData.length} posts`);
 });
 
@@ -340,8 +500,8 @@ Then('the first post should have id {string}', async function (expectedId: strin
 
 When('I search posts by user ID {string}', async function (userId: string) {
     fixture.logger.info(`Searching posts by user ID: ${userId}`);
-    response = await apiHelper.get(`/posts?userId=${userId}`);
-    responseData = await response.json();
+    response = await fixture.request.get(`/posts?userId=${userId}`);
+    responseData = await parseResponse(response);
     fixture.logger.info(`Found ${responseData.length} posts for user ${userId}`);
 });
 
@@ -365,14 +525,14 @@ When('I send {string} concurrent GET requests to {string}', async function (coun
     
     const startTime = Date.now();
     const promises = Array(requestCount).fill(null).map(() => 
-        apiHelper.get(endpoint)
+        fixture.request.get(endpoint)
     );
     
     const responses = await Promise.all(promises);
     const endTime = Date.now();
     
     response = responses[0]; // Use first response for status checks
-    responseData = await response.json();
+    responseData = await parseResponse(response);
     
     // Store timing info for assertion
     (this as any).requestTime = endTime - startTime;
@@ -398,12 +558,14 @@ Then('all responses should have status {string}', async function (expectedStatus
 When('I upload a file with name {string} and content {string}', async function (fileName: string, content: string) {
     fixture.logger.info(`Uploading file: ${fileName}`);
     // Simulate file upload - in real scenario, you'd use multipart/form-data
-    response = await apiHelper.post('/posts', {
-        title: `File Upload: ${fileName}`,
-        body: content,
-        userId: 1
+    response = await fixture.request.post('/posts', {
+        data: {
+            title: `File Upload: ${fileName}`,
+            body: content,
+            userId: 1
+        }
     });
-    responseData = await response.json();
+    responseData = await parseResponse(response);
     fixture.logger.info("File upload simulated");
 });
 
@@ -424,8 +586,8 @@ Then('the response should contain file information', async function () {
 When('I establish a WebSocket connection', async function () {
     fixture.logger.info("Establishing WebSocket connection");
     // Simulate WebSocket connection - in real scenario, you'd use WebSocket API
-    response = await apiHelper.get('/posts/1');
-    responseData = await response.json();
+    response = await fixture.request.get('/posts/1');
+    responseData = await parseResponse(response);
     fixture.logger.info("WebSocket connection simulated");
 });
 
@@ -459,6 +621,144 @@ Then('the connection should be closed', async function () {
 
 When('I delete the user with authentication', async function () {
     fixture.logger.info(`Deleting user ${createdUserId}`);
-    response = await apiHelper.delete(`/users/${createdUserId}`, apiHelper.getAuthHeaders());
+    response = await fixture.request.delete(`/users/${createdUserId}`, {
+        headers: createAuthHeaders()
+    });
     fixture.logger.info("User deletion request sent");
+});
+
+// ==================== RANDOM DATA SPECIFIC STEPS ====================
+
+Given('I use random test data', async function () {
+    TestDataManager.enableRandomData();
+    fixture.logger.info("Random test data enabled");
+    fixture.logger.info(`Sample random data: ${TestDataManager.getAllTestDataAsJson()}`);
+});
+
+Given('I use static test data', async function () {
+    TestDataManager.disableRandomData();
+    fixture.logger.info("Static test data enabled");
+});
+
+When('I create a post with random data', async function () {
+    fixture.logger.info("Creating post with random data");
+    const postData = TestDataManager.getPost();
+    response = await fixture.request.post('/posts', {
+        data: postData
+    });
+    responseData = await parseResponse(response);
+    createdPostId = responseData.id;
+    fixture.logger.info(`Created post with ID: ${createdPostId}`);
+    fixture.logger.info(`Post data used: ${JSON.stringify(postData)}`);
+});
+
+When('I create a user with random credentials', async function () {
+    fixture.logger.info("Creating user with random credentials");
+    const userData = TestDataManager.getUser();
+    response = await fixture.request.post('/users', {
+        data: userData
+    });
+    responseData = await parseResponse(response);
+    createdUserId = responseData.id;
+    fixture.logger.info(`Created user with ID: ${createdUserId}`);
+    fixture.logger.info(`User data used: ${JSON.stringify(userData)}`);
+});
+
+When('I login with random credentials', async function () {
+    fixture.logger.info("Logging in with random credentials");
+    const loginData = TestDataManager.getLoginCredentials();
+    response = await fixture.request.post('/auth/login', {
+        data: loginData
+    });
+    responseData = await parseResponse(response);
+    fixture.logger.info("Login request sent");
+    fixture.logger.info(`Login data used: ${JSON.stringify(loginData)}`);
+});
+
+When('I send a request with random headers', async function () {
+    fixture.logger.info("Sending request with random headers");
+    const randomHeaders = TestDataManager.getHeaders();
+    response = await fixture.request.get('/posts', {
+        headers: randomHeaders
+    });
+    responseData = await parseResponse(response);
+    fixture.logger.info("Request sent with random headers");
+    fixture.logger.info(`Headers used: ${JSON.stringify(randomHeaders)}`);
+});
+
+When('I create {int} random posts', async function (count: number) {
+    fixture.logger.info(`Creating ${count} random posts`);
+    const bulkData = TestDataManager.getBulkRandomData('posts', count);
+    const promises = bulkData.map(postData => 
+        fixture.request.post('/posts', { data: postData })
+    );
+    const responses = await Promise.all(promises);
+    response = responses[0]; // Store first response for validation
+    responseData = await parseResponse(response);
+    fixture.logger.info(`Created ${count} random posts`);
+});
+
+Then('I should see random data in the response', async function () {
+    fixture.logger.info("Validating random data in response");
+    expect(responseData).toBeDefined();
+    expect(responseData).not.toBeNull();
+    
+    // Log the response for debugging
+    fixture.logger.info(`Response data: ${JSON.stringify(responseData)}`);
+    
+    // Basic validation that response contains data
+    if (Array.isArray(responseData)) {
+        expect(responseData.length).toBeGreaterThan(0);
+    } else {
+        expect(Object.keys(responseData).length).toBeGreaterThan(0);
+    }
+    
+    fixture.logger.info("Random data validation passed");
+});
+
+// ==================== ADDITIONAL PLAYWRIGHT-SPECIFIC STEPS ====================
+
+When('I get all posts', async function () {
+    fixture.logger.info("Getting all posts");
+    response = await fixture.request.get('/posts');
+    responseData = await parseResponse(response);
+    fixture.logger.info(`Retrieved ${responseData.length} posts`);
+});
+
+When('I get post with id {string}', async function (postId: string) {
+    fixture.logger.info(`Getting post with ID: ${postId}`);
+    response = await fixture.request.get(`/posts/${postId}`);
+    responseData = await parseResponse(response);
+    fixture.logger.info("Post retrieved");
+});
+
+When('I delete post with id {string}', async function (postId: string) {
+    fixture.logger.info(`Deleting post with ID: ${postId}`);
+    response = await fixture.request.delete(`/posts/${postId}`);
+    responseData = await parseResponse(response);
+    fixture.logger.info("Post deletion request sent");
+});
+
+Then('the response should be ok', async function () {
+    expect(response.ok()).toBeTruthy();
+    fixture.logger.info(`Response is ok with status: ${response.status()}`);
+});
+
+Then('the response should not be ok', async function () {
+    expect(response.ok()).toBeFalsy();
+    fixture.logger.info(`Response is not ok with status: ${response.status()}`);
+});
+
+// Validation step for checking response headers
+Then('the response should have header {string} with value {string}', async function (headerName: string, expectedValue: string) {
+    const headers = response.headers();
+    expect(headers[headerName.toLowerCase()]).toBe(expectedValue);
+    fixture.logger.info(`Header ${headerName} verified with value: ${expectedValue}`);
+});
+
+// Validation step for checking response body contains specific text
+Then('the response body should contain {string}', async function (expectedText: string) {
+    const responseText = await response.text();
+    expect(responseText).toContain(expectedText);
+    fixture.logger.info(`Response body contains: ${expectedText}`);
 }); 
